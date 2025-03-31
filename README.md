@@ -1,5 +1,4 @@
 # Alzheimer-s-disease-prediction-using-ML-algorithms
-
 import pandas as pd
 from tkinter import messagebox
 from tkinter import *
