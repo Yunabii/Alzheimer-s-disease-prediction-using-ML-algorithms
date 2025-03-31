@@ -1,51 +1,196 @@
 # Alzheimer-s-disease-prediction-using-ML-algorithms
-This project aims to develop an efficient and accurate prediction system for Alzheimer’s disease (AD) using machine learning algorithms. Alzheimer’s is a neurodegenerative disorder that progressively impairs memory and cognitive function. Early diagnosis is crucial for effective treatment and care, making machine learning a valuable tool in automating detection.
 
-How It Works:
+import pandas as pd
+from tkinter import messagebox
+from tkinter import *
+from tkinter import simpledialog
+import tkinter
+from tkinter import filedialog
+import matplotlib.pyplot as plt
+import numpy as np
+from tkinter.filedialog import askopenfilename
+import os
+from sklearn.model_selection import train_test_split
 
-The system utilizes various machine learning techniques to analyze patient data and predict the likelihood of Alzheimer’s disease. The key steps involved are:
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
+from sklearn import svm
 
-Data Collection – Acquiring datasets from medical sources that include MRI scans, genetic markers, clinical history, and cognitive test results.
 
-Data Preprocessing – Cleaning and normalizing data to remove inconsistencies and enhance model accuracy.
+main = tkinter.Tk()
+main.title("Alzheimer Disease Prediction using Machine Learning Algorithms")
+main.geometry("1300x1200")
 
-Feature Selection – Identifying key attributes that contribute most to the diagnosis, such as brain imaging features and biomarker data.
+global filename, dataset
+global X, Y
+global error
+global le1, le2, le3
+global X_train, X_test, y_train, y_test, classifier
 
-Model Training – Implementing and training machine learning algorithms such as:
-Decision Trees
-Random Forest
-Support Vector Machines (SVM)
-Artificial Neural Networks (ANN)
-Deep Learning (CNN for image-based analysis)
-Model Evaluation – Assessing performance using metrics like accuracy, precision, recall, and F1-score.
-Prediction and Diagnosis – Deploying the model to analyze new patient data and predict Alzheimer's risk.
+accuracy = []
+precision = []
+recall = []
+fscore = []
 
-What the Project Does
-This project is dedicated to raising awareness, providing support, and advancing knowledge about Alzheimer’s disease. It explores various aspects of the condition, including early detection, treatment options, caregiving strategies, and ongoing research. The project aims to be a comprehensive resource for patients, caregivers, and researchers, offering valuable insights and practical solutions to improve the quality of life for those affected by Alzheimer’s.
+def upload():
+    global filename, dataset
+    filename = filedialog.askopenfilename(initialdir="Dataset")
+    pathlabel.config(text=filename)
+    text.delete('1.0', END)
+    text.insert(END,filename+" loaded\n\n")
+    dataset = pd.read_csv(filename)
+    text.insert(END,str(dataset.head()))
+    label = dataset.groupby('Group').size()
+    label.plot(kind="bar")
+    plt.show()
 
-Why the Project is Useful
-Alzheimer’s is a progressive neurological disorder that affects millions worldwide. This project is useful because it:
-Provides educational resources to help individuals understand the disease.
-Offers guidance for caregivers on how to manage symptoms and provide the best care.
-Highlights the latest research and advancements in Alzheimer’s treatment.
-Creates a community where individuals can share their experiences and find support.
-Encourages early diagnosis and proactive health management to slow disease progression.
+def processDataset():
+    global dataset
+    global X, Y
+    global le1, le2, le3
+    global X_train, X_test, y_train, y_test
+    text.delete('1.0', END)
+    le1 = LabelEncoder()
+    le2 = LabelEncoder()
+    le3 = LabelEncoder()
 
-How Users Can Get Started with the Project
-Users can get started by:
-Reading the Materials – Exploring the available information on Alzheimer’s symptoms, progression, and caregiving.
-Engaging with the Community – Participating in discussions, webinars, or forums.
-Utilizing Resources – Accessing checklists, care plans, and research updates.
-Volunteering or Donating – Supporting Alzheimer’s research or joining advocacy efforts.
+    dataset.fillna(0, inplace = True)
+    dataset.drop(['Subject ID'], axis = 1,inplace=True)
+    dataset.drop(['MRI ID'], axis = 1,inplace=True)
+    dataset['Group'] = pd.Series(le1.fit_transform(dataset['Group'].astype(str)))
+    dataset['M/F'] = pd.Series(le2.fit_transform(dataset['M/F'].astype(str)))
+    dataset['Hand'] = pd.Series(le3.fit_transform(dataset['Hand'].astype(str)))
+    text.insert(END,str(dataset)+"\n\n")
 
-Where Users Can Get Help
-Website & Documentation – A dedicated website or online platform with FAQs, articles, and downloadable guides.
-Community Support Groups – Online forums, social media groups, or local support groups for caregivers and patients.
-Healthcare Professionals – Contacting medical experts, neurologists, or Alzheimer’s associations for professional advice.
+    dataset = dataset.values
+    X = dataset[:,1:dataset.shape[1]]
+    Y = dataset[:,0]
 
-Who Maintains and Contributes to the Project:
-The project is maintained by a dedicated team of researchers, healthcare professionals, writers, and volunteers passionate about Alzheimer’s awareness and support. Contributions come from:
-Medical Experts – Providing verified medical information.
-Caregivers & Families – Sharing real-life experiences and coping strategies.
-Researchers & Scientists – Offering insights into new treatments and discoveries.
-Community Volunteers – Assisting with outreach, content creation, and event organization.
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2)
+    text.insert(END,"Dataset train & test split details\n\n")
+    text.insert(END,"Total records found in dataset : "+str(X.shape[0])+"\n")
+    text.insert(END,"80% dataset used for training : "+str(X_train.shape[0])+"\n")
+    text.insert(END,"20% dataset used for testing : "+str(X_test.shape[0])+"\n")
+
+def calculateMetrics(algorithm, predict, y_test):
+    a = accuracy_score(y_test,predict)*100
+    p = precision_score(y_test, predict,average='macro') * 100
+    r = recall_score(y_test, predict,average='macro') * 100
+    f = f1_score(y_test, predict,average='macro') * 100
+    accuracy.append(a)
+    precision.append(p)
+    recall.append(r)
+    fscore.append(f)
+    text.insert(END,algorithm+" Accuracy  :  "+str(a)+"\n")
+    text.insert(END,algorithm+" Precision : "+str(p)+"\n")
+    text.insert(END,algorithm+" Recall    : "+str(r)+"\n")
+    text.insert(END,algorithm+" FScore    : "+str(f)+"\n\n")    
+
+def runSVM():
+    text.delete('1.0', END)
+    global X,Y, X_train, X_test, y_train, y_test, classifier
+    global accuracy, precision,recall, fscore
+    accuracy.clear()
+    precision.clear()
+    recall.clear()
+    fscore.clear()
+
+    svm_cls = svm.SVC(C=2.0,gamma='scale',kernel = 'rbf', random_state = 2)
+    svm_cls.fit(X, Y)
+    predict = svm_cls.predict(X_test)
+    calculateMetrics("SVM", predict, y_test)
+
+def runDecisionTree():
+    global X,Y, X_train, X_test, y_train, y_test, classifier
+    global accuracy, precision,recall, fscore
+
+    dt = DecisionTreeClassifier()
+    dt.fit(X_train, y_train)
+    predict = dt.predict(X_test)
+    calculateMetrics("Decision Tree", predict, y_test)
+    classifier = dt
+    
+
+def predict():
+    global classifier
+    global le1, le2, le3
+    text.delete('1.0', END)
+    filename = filedialog.askopenfilename(initialdir = "Dataset")
+    test = pd.read_csv(filename)
+    test.fillna(0, inplace = True)
+    test.drop(['Subject ID'], axis = 1,inplace=True)
+    test.drop(['MRI ID'], axis = 1,inplace=True)
+    test['M/F'] = pd.Series(le2.transform(test['M/F'].astype(str)))
+    test['Hand'] = pd.Series(le3.transform(test['Hand'].astype(str)))
+    test = test.values
+    predict = classifier.predict(test)
+    print(predict)
+    for i in range(len(predict)):
+        if predict[i] == 0:
+            text.insert(END,"Patient Test Data = "+str(test[i])+" ====> PREDICTED AS CURED\n\n")
+        if predict[i] == 1:
+            text.insert(END,"Patient Test Data = "+str(test[i])+" ====> PREDICTED AS Presence of Alzheimer Disease\n\n")
+        if predict[i] == 2:
+            text.insert(END,"Patient Test Data = "+str(test[i])+" ====> PREDICTED AS NORMAL\n\n")      
+
+def graph():
+    df = pd.DataFrame([['SVM','Precision',precision[0]],['SVM','Recall',recall[0]],['SVM','F1 Score',fscore[0]],['SVM','Accuracy',accuracy[0]],
+                       ['Decision Tree','Precision',precision[1]],['Decision Tree','Recall',recall[1]],['Decision Tree','F1 Score',fscore[1]],['Decision Tree','Accuracy',accuracy[1]],
+                      ],columns=['Algorithms','Parameters','Value'])
+    df.pivot("Algorithms", "Parameters", "Value").plot(kind='bar')
+    plt.show()
+
+
+
+font = ('times', 14, 'bold')
+title = Label(main, text='Alzheimer Disease Prediction using Machine Learning Algorithms')
+title.config(bg='goldenrod', fg='white')  
+title.config(font=font)           
+title.config(height=3, width=139)       
+title.place(x=0,y=5)
+
+font1 = ('times', 13, 'bold')
+uploadButton = Button(main, text="Upload Alzheimer Disease Dataset", command=upload)
+uploadButton.place(x=50,y=100)
+uploadButton.config(font=font1)  
+
+pathlabel = Label(main)
+pathlabel.config(bg='rosybrown', fg='white')  
+pathlabel.config(font=font1)           
+pathlabel.place(x=470,y=100)
+
+processButton = Button(main, text="Dataset Preprocessing", command=processDataset)
+processButton.place(x=50,y=150)
+processButton.config(font=font1) 
+
+svmButton = Button(main, text="Run SVM Algorithm", command=runSVM)
+svmButton.place(x=280,y=150)
+svmButton.config(font=font1) 
+
+dtButton = Button(main, text="Run Decision Tree Algorithm", command=runDecisionTree)
+dtButton.place(x=470,y=150)
+dtButton.config(font=font1) 
+
+graphbutton = Button(main, text="Comparison Graph", command=graph)
+graphbutton.place(x=50,y=200)
+graphbutton.config(font=font1) 
+
+predictButton = Button(main, text="Predict Disease from Test Data", command=predict)
+predictButton.place(x=280,y=200)
+predictButton.config(font=font1) 
+
+
+font1 = ('times', 12, 'bold')
+text=Text(main,height=22,width=150)
+scroll=Scrollbar(text)
+text.configure(yscrollcommand=scroll.set)
+text.place(x=10,y=250)
+text.config(font=font1)
+
+
+main.config(bg='burlywood2')
+main.mainloop()
